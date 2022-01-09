@@ -1,0 +1,21 @@
+button {
+    background-color: #303840;
+    display: inline-block;
+    text-align: center;
+    margin-top: 8px;
+    margin-bottom: 16px;
+    margin-right: 16px;
+    width: 128px;
+    height: 32px;
+    color: #aaa;
+    border: 2px solid grey;
+    border-radius: 4px;
+}
+
+button:hover {
+    background-color: #384048;
+}
+
+button:active {
+    background-color: #272B30;
+}

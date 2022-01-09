@@ -1,0 +1,22 @@
+input[type="number" i] {
+    background-color: #272B30 !important;
+    color: #AAA;
+    border: 1px solid grey;
+    border-radius: 4px;
+    margin-right: 8px;
+    height: 32px;
+}
+
+input[type="checkbox" i] {
+    margin-right: 4px;
+}
+
+input:valid {
+    outline: none;
+}
+
+input:invalid {
+    outline: none;
+    color: #f00;
+    font-weight: bold;
+}

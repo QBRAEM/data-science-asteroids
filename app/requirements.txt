@@ -1,0 +1,16 @@
+gunicorn
+dash
+dash_table
+dash_core_components
+dash_html_components
+dash_bootstrap_components
+numpy==1.18.1
+pyarrow
+plotly
+scipy
+pandas
+catboost
+astropy
+poliastro
+google-cloud-bigquery
+ipywidgets==7.0.0

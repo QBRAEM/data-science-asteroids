@@ -1,6 +1,12 @@
 # formation-data-science-projet
 
+*© Karim Selami, Quentin Braem - 2021~2022*
+
 Dataset : https://www.kaggle.com/basu369victor/prediction-of-asteroid-diameter
+
+Notebook : data_pfr_KS_QB.ipynb
+
+Application Web : https://asteroids-335014.ew.r.appspot.com
 
 ## Description des champs de données :
 https://cneos.jpl.nasa.gov/glossary/

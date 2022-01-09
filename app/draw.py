@@ -1,84 +1,122 @@
-from query import *
-
-import json
-from dash.dependencies import Input, Output, State
-from dash.exceptions import PreventUpdate
-from flask import Flask, render_template, url_for, request
-from flask.wrappers import JSONMixin
-from markupsafe import Markup
-import numpy as np
-import pandas as pd
-import locale
-from random import randint
-import warnings
-import pickle as pk
-import numpy as np
-import scipy as sp
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-import statsmodels.api as sm
-import plotly as ply
+import globals
+import query
 import plotly.graph_objects as go
-import multiprocessing
-import os
-
-import dash
-import dash_table
 import dash_core_components as dcc
 import dash_html_components as html
-import random
-import numpy as np
-import pandas as pd
-from statsmodels.graphics.gofplots import qqplot
-from sklearn.model_selection import train_test_split
-import plotly.express as px
-import plotly.graph_objs as go
-import plotly.figure_factory as ff
-import pickle as pk
-
 from math import *
-from datetime import date
-from plotly.subplots import make_subplots
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
-from sklearn.metrics import r2_score
-from sklearn.model_selection import RandomizedSearchCV
-from sklearn.linear_model import LinearRegression
-from sklearn.ensemble import RandomForestRegressor
-from lightgbm import LGBMRegressor
-from catboost import CatBoostRegressor
-from xgboost import XGBRegressor
-from multiprocessing import Pool
-from tqdm.notebook import tqdm
 
+#
+# Crée et retourne une checkbox.
+#
 
-from astropy import units as u
-from poliastro.twobody import Orbit
-from poliastro.bodies import Sun
+def get_checkbox(name, title, checked):
+    return html.Tr([
+        dcc.Checklist(
+            id='checkbox_' + name,
+            options=[{'label': title, 'value': name}],
+            value=[name] if checked else [],
+            style={"white-space": "nowrap", "font-size": 12},
+        ),
+    ])
 
+#
+# Crée et retourne un input numérique.
+#
 
+def get_slider(name, title, min, max, step):
+    return html.Tr([
+        html.Td([
+            html.P(title, style={"font-weight": 'bold'}),
+        ], style={"width": "30%"}),
+        html.Td([
+            html.Div([
+                dcc.Input(
+                    id='input_' + name,
+                    type="number",
+                    min=min,
+                    max=max,
+                    step=step,
+                    value=min,
+                    style={"width": "100%"}
+                ),
+            ], style={"width": "10%", "display": "inline-block"}),
+            html.Div([
+                dcc.Slider(
+                    id='slider_' + name,
+                    min=min,
+                    max=max,
+                    step=step,
+                    value=min,
+                    tooltip={"placement": "bottom", "always_visible": False},
+                ),
+            ], style={"width": "90%", "height": "15px", "vertical-align": "center", "display": "inline-block"}),
+        ], style={"width": "70%"}),
+    ])
 
-def get_asteroid_description_and_size(asteroid, displayDetails, displaySize):
-    text = "Diamètre : " + "{:.2f}".format(asteroid['diameter']) + " km<br>"
-    if displayDetails:
-        text += "Demi grand-axe : " + "{:.2f}".format(asteroid['semi_major_axis']) + " UA<br>"
-        text += "Excentricité : " + "{:.2f}".format(asteroid['eccentricity']) + "<br>"
-        text += "Inclinaison : " + "{:.2f}".format(asteroid['inclination']) + "°<br>"
-        text += "Longitude du noeud ascendant : " + "{:.2f}".format(asteroid['longitude_ascending_node']) + "°<br>"
-        text += "Argument du périastre : " + "{:.2f}".format(asteroid['argument_perihelion']) + "°<br>"
-        text += "Anomalie moyenne : " + "{:.2f}".format(asteroid['mean_anomaly']) + "°<br>"
-        text += "Distance au Soleil : " + "{:.2f}".format(asteroid['dist'] / 150000000) + " UA<br>"
-    size = displaySize * max(1.0, np.log(asteroid["diameter"]))
-    return text, size
+#
+# Crée et retourne une liste déroulante.
+#
     
-    
+def get_dropdown(name, title, options, value):
+    return html.Tr([
+        html.Td([
+            html.P(title, style={"font-weight": 'bold'}),
+        ], style={"width": "30%"}),
+        html.Td([
+            dcc.Dropdown(
+                id='dropdown_' + name,
+                options=options,
+                value=value,
+            ),
+        ], style={"width": "70%"}),
+    ])
 
+#
+# Retourne la description et la taille de l'astéroïde.
+#
 
+def get_asteroid_description_and_size(asteroid, details, size):
+    text = ""
+    if details is not None and len(details) != 0:
+        if "diameter" in details:
+            text += "Diamètre : " + "{:.2f}".format(asteroid['diameter']) + " km<br>"
+        if "semi_major_axis" in details:
+            text += "Demi grand-axe : " + "{:.2f}".format(asteroid['semi_major_axis']) + " UA<br>"
+        if "eccentricity" in details:
+            text += "Excentricité : " + "{:.2f}".format(asteroid['eccentricity']) + "<br>"
+        if "inclination" in details:
+            text += "Inclinaison : " + "{:.2f}".format(asteroid['inclination']) + "°<br>"
+        if "longitude_ascending_node" in details:
+            text += "Longitude du noeud ascendant : " + "{:.2f}".format(asteroid['longitude_ascending_node']) + "°<br>"
+        if "argument_perihelion" in details:
+            text += "Argument du périastre : " + "{:.2f}".format(asteroid['argument_perihelion']) + "°<br>"
+        if "mean_anomaly" in details:
+            text += "Anomalie moyenne : " + "{:.2f}".format(asteroid['mean_anomaly']) + "°<br>"
+        if "dist" in details:
+            earth = query.get_planet("Terre")
+            earth_pos = [
+                earth["x"][0],
+                earth["y"][0],
+                earth["z"][0],
+            ]
+            earth_dist = sqrt(
+                (asteroid["x0"] - earth_pos[0]) ** 2 +
+                (asteroid["y0"] - earth_pos[1]) ** 2 +
+                (asteroid["z0"] - earth_pos[2]) ** 2
+            )
+            text += "Distance au Soleil : " + "{:.2f}".format(asteroid['dist'] * globals.km_to_ua) + " UA<br>"
+            text += "Distance à la Terre : " + "{:.2f}".format(earth_dist * globals.km_to_ua) + " UA<br>"
+    else:
+        text = "Asteroïde"
+    return text, size * max(1.0, log(asteroid["diameter"]))
 
-def draw_star(figure):
-    star = query_star()
-    fig = go.Scatter3d(
+#
+# Retourne un objet graphique représentant l'étoile du système.
+#
+
+def get_star():
+    star = query.get_star()
+    return go.Scatter3d(
         x=[0],
         y=[0],
         z=[0],
@@ -87,18 +125,20 @@ def draw_star(figure):
         hoverinfo ="text",
         text=star["name"],
         marker_color=star["color"],
-        marker_size=(2 * np.log(star["diameter"])),
+        marker_size=(2 * log(star["diameter"])),
     )
-    figure.add_trace(fig)
-    
 
-def draw_planets(figure, bounds, displayPlanets):
-    planets = query_planets()
-    for planet in planets:
+#
+# Retourne une liste d'objets graphiques représentant les planètes du système.
+#
+
+def get_planets(bounds, planets):
+    figs = []
+    for planet in query.get_planets():
         x = planet["x"][0]
         y = planet["y"][0]
         z = planet["z"][0]
-        isVisible = displayPlanets == None or planet["name"] in displayPlanets
+        is_visible = planets is None or planet["name"] in planets
         
         # Si la planète est en dehors de la zone de traçage, inutile de la dessiner
         dist = 1.1 * sqrt(x * x + y * y + z * z)
@@ -106,7 +146,7 @@ def draw_planets(figure, bounds, displayPlanets):
             continue
         
         # Planète
-        fig = go.Scatter3d(
+        figs.append(go.Scatter3d(
             x=[x],
             y=[y],
             z=[z],
@@ -115,13 +155,12 @@ def draw_planets(figure, bounds, displayPlanets):
             hoverinfo="text",
             text=planet["name"],
             marker_color=planet["color"],
-            marker_size=(1.5 * np.log(planet["diameter"])),
-            visible=isVisible,
-        )
-        figure.add_trace(fig)
+            marker_size=(1.5 * log(planet["diameter"])),
+            visible=is_visible,
+        ))
         
         # Orbite
-        fig = go.Scatter3d(
+        figs.append(go.Scatter3d(
             x=planet["x"],
             y=planet["y"],
             z=planet["z"],
@@ -131,14 +170,17 @@ def draw_planets(figure, bounds, displayPlanets):
             hoverinfo="skip",
             marker_color=planet["color"],
             line_width=5,
-            visible=isVisible,
-        )
-        figure.add_trace(fig)
+            visible=is_visible,
+        ))
+    return figs
 
+#
+# Retourne une liste d'objets graphiques représentant les astéroïdes du système.
+#
 
-def draw_asteroids(figure, bounds, distMin, distMax, diameterMin, diameterMax, limit, displayDetails, displaySize):
-    asteroids = query_asteroids(bounds, distMin, distMax, diameterMin, diameterMax, limit)
-    drawData = {
+def get_asteroids(bounds, dist_min, dist_max, diameter_min, diameter_max, limit, details, size):
+    asteroids = query.get_asteroids(bounds, dist_min, dist_max, diameter_min, diameter_max, limit)
+    draw_data = {
         "x": [],
         "y": [],
         "z": [],
@@ -149,58 +191,86 @@ def draw_asteroids(figure, bounds, distMin, distMax, diameterMin, diameterMax, l
     
     # Récupère les astéroïdes à dessiner
     for i, asteroid in enumerate(asteroids):
-        text, size = get_asteroid_description_and_size(asteroid, displayDetails, displaySize)
-        drawData["x"].append(asteroid["x0"])
-        drawData["y"].append(asteroid["y0"])
-        drawData["z"].append(asteroid["z0"])
-        drawData["text"].append(text)
-        drawData["color"].append("#606060")
-        drawData["size"].append(size)
+        text_size = get_asteroid_description_and_size(asteroid, details, size)
+        draw_data["x"].append(asteroid["x0"])
+        draw_data["y"].append(asteroid["y0"])
+        draw_data["z"].append(asteroid["z0"])
+        draw_data["text"].append(text_size[0])
+        draw_data["color"].append("#606060")
+        draw_data["size"].append(text_size[1])
+    
+    return [
         
-    # Astéroïdes
-    fig = go.Scatter3d(
-        x=drawData["x"],
-        y=drawData["y"],
-        z=drawData["z"],
+    # Astéroïde prédit
+    go.Scatter3d(
+        x=[0],
+        y=[0],
+        z=[0],
         mode="markers",
         opacity=1,
         hoverinfo="text",
-        name="drawData",
-        text=drawData["text"],
-        marker_color=drawData["color"],
-        marker_size=drawData["size"],
-    )
-    figure.add_trace(fig)
+        text="",
+        marker_color="#FF80FF",
+        marker_size=0,
+        visible=False,
+    ),
     
-    # Trajectoire
-    fig = go.Scatter3d(
-        x=np.zeros(181),
-        y=np.zeros(181),
-        z=np.zeros(181),
+    # Trajectoire de la prédiction
+    go.Scatter3d(
+        x=[0 for i in range(181)],
+        y=[0 for i in range(181)],
+        z=[0 for i in range(181)],
+        mode="lines",
+        connectgaps=True,
+        opacity=1,
+        hoverinfo="skip",
+        marker_color="#FF80FF",
+        line_width=5,
+        visible=False,
+    ),
+        
+    # Astéroïdes
+    go.Scatter3d(
+        x=draw_data["x"],
+        y=draw_data["y"],
+        z=draw_data["z"],
+        mode="markers",
+        opacity=1,
+        hoverinfo="text",
+        text=draw_data["text"],
+        marker_color=draw_data["color"],
+        marker_size=draw_data["size"],
+    ),
+    
+    # Trajectoire de l'astéroïde sélectionné
+    go.Scatter3d(
+        x=[0 for i in range(181)],
+        y=[0 for i in range(181)],
+        z=[0 for i in range(181)],
         mode="lines",
         opacity=1,
         connectgaps=True,
-        name="trajectory",
         hoverinfo="skip",
         marker_color="#FFFFFF",
         line_width=5,
     )
-    figure.add_trace(fig)
+    ]
 
+#
+# Retourne la figure sur laquelle est représenté le système planétaire.
+#
 
-def draw_planetary_system(bounds=1000000000, distMin=0, distMax=50000000000, diameterMin=0, diameterMax=100, limit=1000, displayPlanets=None, displayDetails=False, displaySize=5):
+def get_planetary_system(bounds=1000000000, dist_min=0, dist_max=50000000000, diameter_min=0, diameter_max=100, limit=1000, planets=None, details=["diameter"], size=5):
     figure = go.FigureWidget()
-    draw_star(figure)
-    draw_planets(figure, bounds, displayPlanets)
-    draw_asteroids(figure, bounds, distMin, distMax, diameterMin, diameterMax, limit, displayDetails, displaySize)
+    figure.add_trace(get_star())
+    for fig in get_planets(bounds, planets): figure.add_trace(fig)
+    for fig in get_asteroids(bounds, dist_min, dist_max, diameter_min, diameter_max, limit, details, size): figure.add_trace(fig)
     figure.update_layout({
         "clickmode": "event+select",
         "showlegend": False,
-        "autosize": False,
-        "width": 1500,
-        "height": 1500,
-        "paper_bgcolor":'rgba(0,0,0,0.75)',
-        "plot_bgcolor":'rgba(0,0,0,0.75)',
+        "paper_bgcolor":'rgba(0,0,0,0.5)',
+        "plot_bgcolor":'rgba(0,0,0,0.5)',
+        "margin": { "l": 0, "r": 0, "t": 0, "b": 0 },
         "scene": {
             "aspectmode": "cube",
             "xaxis": {
@@ -231,42 +301,17 @@ def draw_planetary_system(bounds=1000000000, distMin=0, distMax=50000000000, dia
     })
     return figure
 
-
-
-
-def compute_body_position(semi_major_axis, eccentricity, inclination, longitude_ascending_node, argument_perihelion, mean_anomaly, delta_anomaly=0):
-    true_anomaly = (mean_anomaly + delta_anomaly) + 2 * eccentricity * sin(mean_anomaly + delta_anomaly)
-    o = Orbit.from_classical(
-        Sun,
-        semi_major_axis * u.AU,
-        eccentricity * u.one,
-        inclination * u.deg,
-        longitude_ascending_node * u.deg,
-        argument_perihelion * u.deg,
-        true_anomaly * u.deg
-    )
-    return (o.r[0].value, o.r[1].value, o.r[2].value)
-
-
-def compute_body_trajectory(semi_major_axis, eccentricity, inclination, longitude_ascending_node, argument_perihelion, mean_anomaly):
-    trajectory = { "x": [], "y": [], "z": [] }
-    for i in range(181):
-        point = compute_body_position(semi_major_axis, eccentricity, inclination, longitude_ascending_node, argument_perihelion, mean_anomaly, (2 * i) % 360)
-        trajectory["x"].append(point[0])
-        trajectory["y"].append(point[1])
-        trajectory["z"].append(point[2])
-    return trajectory
-
-
-
+#
+# Modifie les paramètres de l'astéroïde sélectionné pour le mettre au premier plan et afficher sa trajectoire.
+#
 
 def highlight_asteroid(figure, point_number):
-    colors = np.repeat(["#606060"], len(figure["data"][-2]["marker"]["color"]))
+    colors = ["#606060" for i in range(len(figure["data"][-2]["marker"]["color"]))]
 
     # Sélectionne l'astéroïde cliqué
-    if point_number != -1:
-        asteroid = query_asteroid(point_number)
-        trajectory = compute_body_trajectory(
+    asteroid = query.get_asteroid(point_number)
+    if asteroid is not None:
+        trajectory = query.get_asteroid_trajectory(
             asteroid["semi_major_axis"],
             asteroid["eccentricity"],
             asteroid["inclination"],
@@ -274,19 +319,17 @@ def highlight_asteroid(figure, point_number):
             asteroid["argument_perihelion"],
             asteroid["mean_anomaly"]
         )
-        trajectoryX = trajectory["x"]
-        trajectoryY = trajectory["y"]
-        trajectoryZ = trajectory["z"]
+        trajectory_x = trajectory["x"]
+        trajectory_y = trajectory["y"]
+        trajectory_z = trajectory["z"]
         colors[point_number] = "#FFFFFF"
     else:
-        trajectoryX = np.zeros(181)
-        trajectoryY = np.zeros(181)
-        trajectoryZ = np.zeros(181)
+        trajectory_x = [0 for i in range(181)]
+        trajectory_y = [0 for i in range(181)]
+        trajectory_z = [0 for i in range(181)]
         
     # Met à jour le graphique
     figure["data"][-2]["marker"]["color"] = tuple(colors)
-    figure["data"][-1]["x"] = trajectoryX
-    figure["data"][-1]["y"] = trajectoryY
-    figure["data"][-1]["z"] = trajectoryZ
-    pass
-    
+    figure["data"][-1]["x"] = trajectory_x
+    figure["data"][-1]["y"] = trajectory_y
+    figure["data"][-1]["z"] = trajectory_z
