@@ -8,6 +8,10 @@ Notebook : data_pfr_KS_QB.ipynb
 
 Application Web : https://asteroids-335014.ew.r.appspot.com
 
+![alt text](./app1.png)
+
+![alt text](./app2.png)
+
 ## Description des champs de données :
 https://cneos.jpl.nasa.gov/glossary/
 
